@@ -1,0 +1,669 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>IR Search Engine</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <style>
+    :root {
+      --bg: #0f172a;
+      --bg-alt: #020617;
+      --card: #020617;
+      --card-alt: #0b1120;
+      --accent: #38bdf8;
+      --accent-soft: rgba(56, 189, 248, 0.12);
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+      --border: #1f2937;
+      --error: #f97373;
+      --code: #111827;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top, #1e293b 0, #020617 55%, #020617 100%);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    .page {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 2rem 1.25rem 3rem;
+    }
+
+    header {
+      margin-bottom: 2rem;
+    }
+
+    .title-row {
+      display: flex;
+      align-items: baseline;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    h1 {
+      font-size: clamp(1.6rem, 2vw, 1.9rem);
+      font-weight: 650;
+      letter-spacing: 0.03em;
+      margin: 0;
+    }
+
+    .subtitle {
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+
+    .pill {
+      padding: 0.2rem 0.55rem;
+      border-radius: 999px;
+      font-size: 0.7rem;
+      border: 1px solid rgba(148, 163, 184, 0.5);
+      color: var(--muted);
+    }
+
+    main {
+      display: grid;
+      grid-template-columns: minmax(0, 2.2fr) minmax(0, 1.4fr);
+      gap: 1.75rem;
+    }
+
+    @media (max-width: 900px) {
+      main {
+        grid-template-columns: minmax(0, 1fr);
+      }
+    }
+
+    .card {
+      background: linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(15, 23, 42, 0.96));
+      border-radius: 1rem;
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      box-shadow:
+        0 22px 45px rgba(15, 23, 42, 0.9),
+        0 0 0 1px rgba(15, 23, 42, 0.9);
+      padding: 1.35rem 1.4rem 1.2rem;
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .card-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .card-subtitle {
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    /* Search form */
+
+    form.search-form {
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+    }
+
+    .field-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+
+    .field-label {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.09em;
+      color: var(--muted);
+    }
+
+    .field-description {
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+
+    .query-row {
+      display: flex;
+      gap: 0.6rem;
+      flex-wrap: wrap;
+    }
+
+    .query-input {
+      flex: 1 1 220px;
+      position: relative;
+    }
+
+    .query-input input[type="text"] {
+      width: 100%;
+      border-radius: 0.7rem;
+      border: 1px solid rgba(148, 163, 184, 0.5);
+      padding: 0.65rem 0.75rem 0.65rem 2.1rem;
+      background-color: rgba(15, 23, 42, 0.95);
+      color: var(--text);
+      font-size: 0.9rem;
+      outline: none;
+    }
+
+    .query-input input[type="text"]:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.4);
+    }
+
+    .query-prefix {
+      position: absolute;
+      left: 0.6rem;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 0.75rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+
+    .model-row {
+      display: flex;
+      gap: 0.6rem;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    select,
+    input[type="number"] {
+      border-radius: 0.55rem;
+      border: 1px solid rgba(148, 163, 184, 0.6);
+      background-color: rgba(15, 23, 42, 0.95);
+      color: var(--text);
+      padding: 0.4rem 0.6rem;
+      font-size: 0.85rem;
+      outline: none;
+      min-width: 0;
+    }
+
+    select:focus,
+    input[type="number"]:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.4);
+    }
+
+    .btn-row {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 0.4rem;
+    }
+
+    button[type="submit"] {
+      border-radius: 999px;
+      padding: 0.45rem 1.1rem;
+      border: none;
+      background: radial-gradient(circle at 0% 0%, #38bdf8, #0ea5e9);
+      color: #0b1120;
+      font-size: 0.85rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      cursor: pointer;
+    }
+
+    button[type="submit"]:hover {
+      filter: brightness(1.06);
+    }
+
+    button[type="submit"]:active {
+      transform: translateY(1px);
+    }
+
+    /* Results */
+
+    .results-header {
+      margin-top: 0.6rem;
+      margin-bottom: 0.8rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 0.75rem;
+    }
+
+    .results-title {
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+
+    .results-meta {
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+
+    .result-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .result {
+      padding: 0.7rem 0.85rem;
+      border-radius: 0.8rem;
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid rgba(15, 23, 42, 0.9);
+      transition: border-color 0.12s ease, transform 0.12s ease,
+        background-color 0.12s ease;
+    }
+
+    .result:hover {
+      border-color: rgba(56, 189, 248, 0.55);
+      background: radial-gradient(circle at top left,
+      rgba(56, 189, 248, 0.17),
+      rgba(15, 23, 42, 0.9));
+      transform: translateY(-1px);
+    }
+
+    .result-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 0.75rem;
+      align-items: baseline;
+    }
+
+    .result-left {
+      display: flex;
+      align-items: baseline;
+      gap: 0.55rem;
+      min-width: 0;
+    }
+
+    .result-rank {
+      font-size: 0.78rem;
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .result-docid {
+      font-weight: 600;
+      font-size: 0.9rem;
+      white-space: nowrap;
+    }
+
+    .result-score {
+      font-size: 0.78rem;
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .result-path {
+      margin-top: 0.2rem;
+      font-size: 0.78rem;
+      color: var(--muted);
+      word-break: break-all;
+    }
+
+    .result-snippet {
+      margin-top: 0.45rem;
+      font-size: 0.83rem;
+      line-height: 1.5;
+      color: #d1d5db;
+      white-space: pre-wrap;
+    }
+
+    .highlight-query {
+      background-color: var(--accent-soft);
+      border-radius: 0.25rem;
+      padding: 0 0.15rem;
+    }
+
+    /* Metrics card */
+
+    .metrics-section {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .metrics-summary {
+      padding: 0.6rem 0.75rem;
+      background: rgba(15, 23, 42, 0.8);
+      border-radius: 0.8rem;
+      border: 1px dashed rgba(148, 163, 184, 0.55);
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    .metric-badge-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin: 0.25rem 0 0;
+    }
+
+    .metric-pill {
+      font-size: 0.78rem;
+      padding: 0.2rem 0.55rem;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid rgba(148, 163, 184, 0.5);
+      color: var(--text);
+    }
+
+    .metric-pill strong {
+      font-weight: 600;
+    }
+
+    .metrics-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 0.3rem;
+      font-size: 0.83rem;
+    }
+
+    .metrics-table th,
+    .metrics-table td {
+      padding: 0.35rem 0.25rem;
+    }
+
+    .metrics-table th {
+      text-align: left;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.09em;
+      font-size: 0.75rem;
+    }
+
+    .metrics-table tr + tr td {
+      border-top: 1px solid rgba(31, 41, 55, 0.95);
+    }
+
+    .metric-name {
+      color: var(--muted);
+    }
+
+    .metric-value {
+      font-variant-numeric: tabular-nums;
+      font-weight: 600;
+    }
+
+    .metric-note {
+      margin-top: 0.5rem;
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+
+    .metric-note strong {
+      color: var(--accent);
+    }
+
+    .metrics-empty {
+      font-size: 0.8rem;
+      color: var(--muted);
+      padding: 0.55rem 0.4rem 0.35rem;
+      border-radius: 0.6rem;
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px dashed rgba(148, 163, 184, 0.4);
+    }
+
+    .metrics-empty span {
+      color: #e5e7eb;
+    }
+
+    .hint {
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-top: 0.6rem;
+    }
+
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 0.78rem;
+      background: var(--code);
+      padding: 0.15rem 0.25rem;
+      border-radius: 0.35rem;
+      border: 1px solid rgba(31, 41, 55, 0.9);
+    }
+
+    footer {
+      margin-top: 2rem;
+      font-size: 0.75rem;
+      color: var(--muted);
+      text-align: center;
+    }
+
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header>
+      <div class="title-row">
+        <h1>IR Search &amp; WebAP Evaluation</h1>
+        <span class="pill">BM25 · QL · Boolean</span>
+      </div>
+      <p class="subtitle">
+        Powered by a SQLite index (<code>{{ DB_PATH if DB_PATH is defined else "index.db" }}</code>) and
+        evaluated against <code>queries.txt</code> / <code>qrels.txt</code>.
+      </p>
+    </header>
+
+    <main>
+      <!-- Left: search + results -->
+      <section class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Search</div>
+            <div class="card-subtitle">
+              Enter a query string. If it exactly matches a WebAP query, per-query metrics will appear on the right.
+            </div>
+          </div>
+        </div>
+
+        <form class="search-form" method="get" action="{{ url_for('home') }}">
+          <!-- Query -->
+          <div class="field-group">
+            <label class="field-label" for="q">Query</label>
+            <div class="query-row">
+              <div class="query-input">
+                <span class="query-prefix">Q</span>
+                <input
+                  type="text"
+                  id="q"
+                  name="q"
+                  placeholder="Type a query…"
+                  value="{{ query or '' }}"
+                  autocomplete="off"
+                >
+              </div>
+            </div>
+          </div>
+
+          <!-- Model + k -->
+          <div class="field-group">
+            <label class="field-label">Settings</label>
+            <div class="model-row">
+              <div>
+                <label for="model" class="field-description">Retrieval model</label><br>
+                <select id="model" name="model">
+                  <option value="bm25" {% if model == 'bm25' %}selected{% endif %}>BM25</option>
+                  <option value="ql" {% if model == 'ql' %}selected{% endif %}>Query Likelihood</option>
+                  <option value="bool" {% if model == 'bool' %}selected{% endif %}>Boolean</option>
+                </select>
+              </div>
+              <div>
+                <label for="k" class="field-description">Top-k</label><br>
+                <input
+                  type="number"
+                  id="k"
+                  name="k"
+                  min="1"
+                  max="1000"
+                  value="{{ k or 10 }}"
+                  style="width: 4.2rem; text-align: right;"
+                >
+              </div>
+            </div>
+          </div>
+
+          <div class="btn-row">
+            <button type="submit">Run Search</button>
+          </div>
+        </form>
+
+        {% if query %}
+          <div class="results-header">
+            <div class="results-title">
+              Results for <code>{{ query }}</code>
+            </div>
+            <div class="results-meta">
+              {% if results %}
+                {{ results|length }} result{{ '' if results|length == 1 else 's' }} shown
+              {% else %}
+                No results found.
+              {% endif %}
+            </div>
+          </div>
+
+          {% if results %}
+            <ul class="result-list">
+              {% for r in results %}
+                <li class="result">
+                  <div class="result-header">
+                    <div class="result-left">
+                      <div class="result-rank">#{{ loop.index }}</div>
+                      <div class="result-docid">{{ r.doc_id }}</div>
+                    </div>
+                    <div class="result-score">
+                      score = {{ '%.5f' % r.score }}
+                    </div>
+                  </div>
+
+                  <div class="result-path">
+                    {{ r.filename }}
+                  </div>
+
+                  {% if r.snippet %}
+                    <div class="result-snippet">
+                      {{ r.snippet }}
+                    </div>
+                  {% endif %}
+                </li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+        {% endif %}
+      </section>
+
+      <!-- Right: metrics panel -->
+      <aside class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">IR Search Metrics</div>
+            <div class="card-subtitle">
+              Computed using <code>f_score</code>, <code>avg_precision</code>, and <code>reciprocal_rank</code> over
+              normalized doc IDs.
+            </div>
+          </div>
+        </div>
+
+        <div class="metrics-section">
+          {% if query %}
+            {% if metrics.qid is not none and metrics.num_rels > 0 %}
+              <div class="metrics-summary">
+                <div>
+                  Matching WebAP query:
+                  <strong>qid {{ metrics.qid }}</strong>
+                </div>
+                <div class="metric-badge-row">
+                  <span class="metric-pill">
+                    <strong>Rel docs:</strong> {{ metrics.num_rels }}
+                  </span>
+                  <span class="metric-pill">
+                    <strong>k:</strong> {{ metrics.k }}
+                  </span>
+                </div>
+              </div>
+
+              <table class="metrics-table">
+                <tr>
+                  <th>Metric</th>
+                  <th>Value</th>
+                </tr>
+                <tr>
+                  <td class="metric-name">Precision@k</td>
+                  <td class="metric-value">
+                    {{ '%.4f' % metrics.precision_at_k }}
+                  </td>
+                </tr>
+                <tr>
+                  <td class="metric-name">Recall@k</td>
+                  <td class="metric-value">
+                    {{ '%.4f' % metrics.recall_at_k }}
+                  </td>
+                </tr>
+                <tr>
+                  <td class="metric-name">Average Precision</td>
+                  <td class="metric-value">
+                    {{ '%.4f' % metrics.avg_precision }}
+                  </td>
+                </tr>
+                <tr>
+                  <td class="metric-name">Reciprocal Rank</td>
+                  <td class="metric-value">
+                    {{ '%.4f' % metrics.reciprocal_rank }}
+                  </td>
+                </tr>
+              </table>
+
+              <p class="metric-note">
+                Metrics are calculated on the current ranking using the chosen model
+                (<strong>{{ model|upper }}</strong>) and top-<strong>{{ metrics.k }}</strong> cutoff.
+              </p>
+            {% else %}
+              <div class="metrics-empty">
+                {% if metrics.qid is none %}
+                  <span>No exact WebAP query text match found for this query.</span><br>
+                  To see metrics, use a query that exactly matches a line in <code>queries.txt</code>.
+                {% elif metrics.num_rels == 0 %}
+                  <span>No relevance judgments for this qid.</span><br>
+                  This query exists in <code>queries.txt</code>, but has no positive labels in
+                  <code>qrels.txt</code>.
+                {% else %}
+                  No metrics available.
+                {% endif %}
+              </div>
+            {% endif %}
+          {% else %}
+            <div class="metrics-empty">
+              <span>Run a query to see WebAP evaluation.</span><br>
+              If the text matches a query in <code>queries.txt</code>, metrics will appear here.
+            </div>
+          {% endif %}
+
+          <p class="hint">
+            Doc IDs are derived from filenames (e.g., <code>GX237-99-8478409.txt</code> → <code>GX237-99-8478409</code>)
+            to match the ids used in <code>qrels.txt</code>.
+          </p>
+        </div>
+      </aside>
+    </main>
+
+    <footer>
+      Flask app using <code>Searcher</code>, <code>BM25Similarity</code>, <code>QLSimilarity</code>, and
+      <code>BooleanSimilarity</code> backends.
+    </footer>
+  </div>
+</body>
+</html>
